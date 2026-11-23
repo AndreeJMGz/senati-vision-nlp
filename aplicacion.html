@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conteo de vehículos y chatbot · SENATI</title>
+  <style>
+    :root {
+      --navy: #102a43;
+      --blue: #1d4e89;
+      --orange: #e85d04;
+      --green: #0e6b4a;
+      --ink: #1a2b3c;
+      --muted: #4e5e6e;
+      --line: #d6e0ea;
+      --bg: #f4f7fb;
+      --card: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    header {
+      background: var(--navy);
+      color: #fff;
+      padding: 22px 28px 18px;
+      border-bottom: 6px solid var(--orange);
+    }
+    header p { margin: 6px 0 0; color: #d6e2f0; }
+    header .alumno {
+      margin: 8px 0 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+    h1 { margin: 0; font-size: 28px; }
+    main {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      padding: 18px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+    section {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(16, 42, 67, 0.08);
+    }
+    .tag {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--orange);
+    }
+    h2 { margin: 4px 0 8px; font-size: 22px; color: var(--navy); }
+    .note { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+    canvas {
+      width: 100%;
+      height: 280px;
+      background: #16324f;
+      border-radius: 12px;
+      display: block;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .stat {
+      background: #f6f8fb;
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .stat b { display: block; font-size: 22px; color: var(--navy); }
+    .stat span { font-size: 12px; color: var(--muted); }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button, .chip {
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 14px;
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    button.primary { background: var(--blue); color: #fff; }
+    button.green { background: var(--green); color: #fff; }
+    button.ghost { background: #e8eef5; color: var(--navy); }
+    .log { min-height: 22px; margin: 10px 0 0; color: var(--green); font-weight: 650; }
+    form { display: flex; gap: 8px; }
+    input[type="text"] {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+    }
+    button.send { background: var(--orange); color: #fff; border-radius: 12px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; }
+    .chip { background: #fff4ec; color: #9a3d02; }
+    .box {
+      background: #f6f8fb;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-top: 8px;
+    }
+    .box strong { display: block; font-size: 12px; color: var(--blue); margin-bottom: 4px; }
+    .box.answer { background: var(--navy); color: #fff; }
+    .box.answer strong { color: #f6b278; }
+    .tokens span {
+      display: inline-block;
+      margin: 2px 4px 2px 0;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #e8eef5;
+    }
+    .tokens span.off { background: #fde8e8; color: #8a3040; text-decoration: line-through; }
+    .tokens span.key { background: #e7f6ef; color: var(--green); }
+    @media (max-width: 860px) {
+      main { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Visión artificial y NLP</h1>
+    <p class="alumno">Andree Martinez y Daira Ochoa - SENATI</p>
+    <p>Dos aplicaciones sencillas: conteo de vehículos y un chatbot.</p>
+  </header>
+  <main>
+    <section>
+      <div class="tag">VISIÓN ARTIFICIAL · YOLO</div>
+      <h2>Conteo de vehículos</h2>
+      <p class="note">Los vehículos cruzan la línea naranja y se cuentan. Es una simulación del sistema: la cámara ve la vía y cada vehículo se marca una sola vez.</p>
+      <canvas id="via" width="760" height="280"></canvas>
+      <div class="stats">
+        <div class="stat"><b id="total">0</b><span>Total</span></div>
+        <div class="stat"><b id="autos">0</b><span>Autos</span></div>
+        <div class="stat"><b id="buses">0</b><span>Buses</span></div>
+        <div class="stat"><b id="motos">0</b><span>Motos</span></div>
+      </div>
+      <div class="row">
+        <button class="green" id="iniciar" type="button">Iniciar</button>
+        <button class="ghost" id="pausar" type="button">Pausa</button>
+        <button class="ghost" id="reiniciar" type="button">Reiniciar</button>
+        <button class="primary" id="pasar" type="button">Pasar un vehículo</button>
+      </div>
+      <p class="log" id="log">Pulsa Iniciar para comenzar el conteo.</p>
+    </section>
+
+    <section>
+      <div class="tag">NLP · CHATBOT</div>
+      <h2>Chatbot</h2>
+      <p class="note">Escribe un mensaje. El bot lo separa en palabras, quita las stopwords y responde con las que quedan.</p>
+      <form id="chat">
+        <input id="mensaje" type="text" placeholder="Escribe aquí, por ejemplo: hola, ¿qué es YOLO?" autocomplete="off">
+        <button class="send" type="submit">Enviar</button>
+      </form>
+      <div class="chips" id="chips">
+        <button class="chip" type="button">Hola, ¿qué es YOLO?</button>
+        <button class="chip" type="button">¿Cómo cuentas los vehículos?</button>
+        <button class="chip" type="button">¿Qué son las stopwords?</button>
+        <button class="chip" type="button">Explícame la tokenización</button>
+      </div>
+      <div class="box">
+        <strong>1. TOKENIZACIÓN</strong>
+        <div class="tokens" id="tokens">Aún no hay mensaje.</div>
+      </div>
+      <div class="box">
+        <strong>2. SIN STOPWORDS</strong>
+        <div class="tokens" id="claves">Las palabras vacías se tachan y quedan las claves.</div>
+      </div>
+      <div class="box answer">
+        <strong>RESPUESTA</strong>
+        <div id="respuesta">Escribe un mensaje para conversar.</div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const canvas = document.getElementById("via");
+    const ctx = canvas.getContext("2d");
+    const counts = { auto: 0, bus: 0, moto: 0 };
+    const tipos = [
+      { id: "auto", w: 78, h: 34, color: "#3d8bfd" },
+      { id: "bus", w: 118, h: 42, color: "#f4a261" },
+      { id: "moto", w: 46, h: 26, color: "#2a9d8f" }
+    ];
+    let vehiculos = [];
+    let corriendo = false;
+    let ultimoSpawn = 0;
+    let anim = 0;
+
+    function lineaX() { return canvas.width * 0.68; }
+
+    function dibujarVia() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#1b3a4b";
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = "#4a5560";
+      ctx.fillRect(0, 48, w, h - 96);
+      ctx.strokeStyle = "#f4f7fb";
+      ctx.setLineDash([16, 14]);
+      ctx.lineWidth = 3;
+      [0.34, 0.55].forEach(function (p) {
+        ctx.beginPath();
+        ctx.moveTo(0, h * p);
+        ctx.lineTo(w, h * p);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      const x = lineaX();
+      ctx.strokeStyle = "#e85d04";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(x, 36);
+      ctx.lineTo(x, h - 36);
+      ctx.stroke();
+      ctx.fillStyle = "#e85d04";
+      ctx.font = "bold 14px Segoe UI";
+      ctx.fillText("LÍNEA DE CONTEO", x - 58, 28);
+    }
+
+    function dibujarVehiculo(v) {
+      ctx.fillStyle = v.color;
+      ctx.fillRect(v.x, v.y, v.w, v.h);
+      ctx.fillStyle = "#d6e2f0";
+      ctx.fillRect(v.x + 8, v.y + 6, v.w * 0.42, v.h * 0.38);
+      if (v.id !== "moto") {
+        ctx.fillStyle = "#102a43";
+        ctx.beginPath();
+        ctx.arc(v.x + 16, v.y + v.h, 6, 0, Math.PI * 2);
+        ctx.arc(v.x + v.w - 16, v.y + v.h, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 12px Segoe UI";
+      ctx.fillText(v.id.toUpperCase(), v.x + 8, v.y + v.h - 8);
+    }
+
+    function crear(tipo) {
+      const carriles = [78, 132, 186];
+      const t = tipo || tipos[Math.floor(Math.random() * tipos.length)];
+      vehiculos.push({
+        id: t.id,
+        w: t.w,
+        h: t.h,
+        color: t.color,
+        x: -t.w - 10,
+        y: carriles[Math.floor(Math.random() * carriles.length)],
+        speed: t.id === "moto" ? 3.4 : t.id === "bus" ? 1.8 : 2.5,
+        contado: false
+      });
+    }
+
+    function pintarConteo() {
+      const total = counts.auto + counts.bus + counts.moto;
+      document.getElementById("total").textContent = total;
+      document.getElementById("autos").textContent = counts.auto;
+      document.getElementById("buses").textContent = counts.bus;
+      document.getElementById("motos").textContent = counts.moto;
+    }
+
+    function frame(tiempo) {
+      if (!corriendo) return;
+      if (tiempo - ultimoSpawn > 1100) {
+        crear();
+        ultimoSpawn = tiempo;
+      }
+      dibujarVia();
+      const xLinea = lineaX();
+      vehiculos.forEach(function (v) {
+        v.x += v.speed;
+        if (!v.contado && v.x + v.w / 2 >= xLinea) {
+          v.contado = true;
+          counts[v.id] += 1;
+          document.getElementById("log").textContent = "Se contó un " + v.id + " al cruzar la línea.";
+          pintarConteo();
+        }
+        dibujarVehiculo(v);
+      });
+      vehiculos = vehiculos.filter(function (v) { return v.x < canvas.width + 20; });
+      anim = requestAnimationFrame(frame);
+    }
+
+    document.getElementById("iniciar").onclick = function () {
+      if (corriendo) return;
+      corriendo = true;
+      ultimoSpawn = 0;
+      document.getElementById("log").textContent = "Cámara en marcha. Contando vehículos…";
+      anim = requestAnimationFrame(frame);
+    };
+    document.getElementById("pausar").onclick = function () {
+      corriendo = false;
+      cancelAnimationFrame(anim);
+      document.getElementById("log").textContent = "Conteo en pausa.";
+    };
+    document.getElementById("reiniciar").onclick = function () {
+      corriendo = false;
+      cancelAnimationFrame(anim);
+      vehiculos = [];
+      counts.auto = counts.bus = counts.moto = 0;
+      pintarConteo();
+      dibujarVia();
+      document.getElementById("log").textContent = "Conteo reiniciado.";
+    };
+    document.getElementById("pasar").onclick = function () {
+      crear(tipos[Math.floor(Math.random() * tipos.length)]);
+      if (!corriendo) {
+        corriendo = true;
+        anim = requestAnimationFrame(frame);
+      }
+    };
+
+    const stopwords = new Set("a al algo algunas algunos ante aquel aquella aquellas aquellos como con contra cual cuales cuando de del desde donde el ella ellas ellos en entre era es esa esas ese esos esta estas este estos fue ha han hasta hay la las le les lo los mas me mi mis mucho muy ni no nos o para pero poco por porque que se sin sobre son su sus te ti tu tus un una unas unos y ya yo".split(" "));
+
+    const respuestas = [
+      { claves: ["yolo"], texto: "YOLO es el sistema de visión elegido. Mira la imagen una sola vez, marca autos, buses y motos, y permite contarlos en tiempo real." },
+      { claves: ["opencv", "camara"], texto: "OpenCV abre la cámara y prepara el video. YOLO se encarga de detectar cada vehículo." },
+      { claves: ["conteo", "contar", "cuenta", "cuentas", "vehiculo", "vehiculos", "auto", "autos", "trafico", "bus", "moto", "motos"], texto: "El conteo funciona así: el vehículo cruza la línea naranja y se suma una sola vez. A la izquierda puedes ver autos, buses y motos por separado." },
+      { claves: ["token", "tokens", "tokenizacion"], texto: "Tokenizar es partir tu frase en palabras. Por ejemplo: «hola necesito ayuda» queda en hola, necesito y ayuda." },
+      { claves: ["stopword", "stopwords", "vacia", "vacias"], texto: "Las stopwords son palabras vacías, como el, la, de, y, en o que. Se quitan para quedarse con las palabras que sí informan." },
+      { claves: ["chatbot", "nlp", "bot"], texto: "Este chatbot es el sistema de NLP elegido. Primero tokeniza el mensaje y después elimina las stopwords para entender la petición." },
+      { claves: ["senati", "horario", "hora"], texto: "Esta página es una demostración del proyecto SENATI: un conteo de vehículos con YOLO y un chatbot con tokenización y stopwords." },
+      { claves: ["ayuda", "puedes", "funciones"], texto: "Puedo explicar YOLO, OpenCV, el conteo de vehículos, la tokenización y las stopwords." },
+      { claves: ["gracias", "gracia"], texto: "Con gusto. Si quieres, pregunta por el conteo de vehículos o por el chatbot." },
+      { claves: ["hola", "buenas", "hey", "saludos"], texto: "Hola. Pregúntame qué es YOLO, cómo se cuentan los vehículos, qué es la tokenización o qué son las stopwords." }
+    ];
+
+    function tokenizar(texto) {
+      const hallados = texto.toLowerCase().match(/[a-záéíóúüñ0-9]+/g);
+      return hallados || [];
+    }
+
+    function pintarTokens(lista, modo) {
+      if (!lista.length) return "Sin palabras.";
+      return lista.map(function (palabra) {
+        const esVacia = stopwords.has(palabra.normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+        const clase = modo === "todas" && esVacia ? "off" : modo === "claves" ? "key" : "";
+        return "<span class=\"" + clase + "\">" + palabra + "</span> ";
+      }).join("");
+    }
+
+    function responder(tokens, claves) {
+      const normal = claves.map(function (p) {
+        return p.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      });
+      for (let i = 0; i < respuestas.length; i++) {
+        const grupo = respuestas[i];
+        for (let j = 0; j < grupo.claves.length; j++) {
+          if (normal.indexOf(grupo.claves[j]) !== -1) return grupo.texto;
+        }
+      }
+      if (!tokens.length) return "Escribe una frase para poder tokenizarla.";
+      if (!claves.length) return "Tu mensaje solo tiene stopwords. Prueba con una palabra como YOLO, conteo o tokenización.";
+      return "Entendí estas palabras clave: " + claves.join(", ") + ". Pregúntame por YOLO, el conteo, la tokenización o las stopwords.";
+    }
+
+    function conversar(texto) {
+      const tokens = tokenizar(texto);
+      const claves = tokens.filter(function (p) {
+        const base = p.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return !stopwords.has(base);
+      });
+      document.getElementById("tokens").innerHTML = pintarTokens(tokens, "todas");
+      document.getElementById("claves").innerHTML = pintarTokens(claves, "claves");
+      document.getElementById("respuesta").textContent = responder(tokens, claves);
+    }
+
+    document.getElementById("chat").onsubmit = function (evento) {
+      evento.preventDefault();
+      const campo = document.getElementById("mensaje");
+      conversar(campo.value);
+      campo.value = "";
+    };
+    document.getElementById("chips").onclick = function (evento) {
+      const boton = evento.target.closest("button");
+      if (!boton) return;
+      document.getElementById("mensaje").value = boton.textContent;
+      conversar(boton.textContent);
+    };
+
+    dibujarVia();
+  </script>
+</body>
+</html>
